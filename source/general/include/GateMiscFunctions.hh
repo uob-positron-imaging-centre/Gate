@@ -180,6 +180,11 @@ typename std::vector<T>  ParseNextContentLine( std::istream& input, int& lineno,
 // Split words separated by spaces
 void GetWords(std::vector<std::string> & words, const std::string & phrase);
 
+//-------
+
+void ReadModuleIndex(std::string filename,
+                     std::vector<int> & moduleIndexList);
+
 #include "GateMiscFunctions.icc"
 
 #endif // GATEMISCFUNCTIONS_HH

@@ -86,7 +86,11 @@ GateCoincidenceSorterMessenger::GateCoincidenceSorterMessenger(GateCoincidenceSo
   SetAcceptancePolicy4CCCmd ->SetGuidance("Coincidence acceptance policy in CC");
   SetAcceptancePolicy4CCCmd ->SetCandidates("keepIfMultipleVolumeIDsInvolved keepIfMultipleVolumeNamesInvolved keepAll");
 
-
+  //For Modular Camera
+  cmdName = GetDirectoryName() + "setModuleFile";
+  modularFileCmd = new G4UIcmdWithAString(cmdName,this);
+  modularFileCmd->SetGuidance("Set the file path for the module map");
+  modularFileCmd->SetParameterName("Name", false);
 }
 
 
@@ -103,6 +107,7 @@ GateCoincidenceSorterMessenger::~GateCoincidenceSorterMessenger()
     delete AllPulseOpenCoincGateCmd;
     delete SetTriggerOnlyByAbsorberCmd;
     delete SetAcceptancePolicy4CCCmd;
+    delete modularFileCmd;
 
 }
 
@@ -136,6 +141,8 @@ void GateCoincidenceSorterMessenger::SetNewValue(G4UIcommand* aCommand, G4String
     { GetCoincidenceSorter()->SetAllPulseOpenCoincGate(AllPulseOpenCoincGateCmd->GetNewBoolValue(newValue)); }
   else if (aCommand == SetTriggerOnlyByAbsorberCmd)
     { GetCoincidenceSorter()->SetIfTriggerOnlyByAbsorber(SetTriggerOnlyByAbsorberCmd->GetNewBoolValue(newValue));}
+  else if (aCommand == modularFileCmd)
+    { GetCoincidenceSorter()->SetModularMapFile(newValue); }
   else
     GateClockDependentMessenger::SetNewValue(aCommand,newValue);
 }

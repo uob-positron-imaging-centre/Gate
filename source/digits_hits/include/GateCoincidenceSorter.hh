@@ -154,6 +154,8 @@ public:
     void SetMultiplesPolicy(const G4String& policy);
     void SetAcceptancePolicy4CC(const G4String& policy);
 
+    void SetModularMapFile(G4String fname);
+
 
 protected:
     //! \name Parameters of the sorter
@@ -175,6 +177,8 @@ protected:
 
     G4int coincID_CC;
 
+    G4bool              m_isModular;                    // Bool to determine if module file is being used
+
     //@}
 
 private:
@@ -188,6 +192,7 @@ private:
     G4bool             m_triggerOnlyByAbsorber; //! Is the window only open by pulses generated in the absorber ?
     G4String      m_absorberSD;// absorber "SD' volume name CC
 
+    std::vector<G4int>    moduleIndexList;
 
 
     std::deque<GateCoincidencePulse*> m_coincidencePulses;  // open coincidence windows
