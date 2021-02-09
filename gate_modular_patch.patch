@@ -1,0 +1,190 @@
+diff --git a/source/digits_hits/include/GateCoincidenceSorter.hh b/source/digits_hits/include/GateCoincidenceSorter.hh
+index 7ae31e22..90133924 100644
+--- a/source/digits_hits/include/GateCoincidenceSorter.hh
++++ b/source/digits_hits/include/GateCoincidenceSorter.hh
+@@ -154,6 +154,8 @@ public:
+     void SetMultiplesPolicy(const G4String& policy);
+     void SetAcceptancePolicy4CC(const G4String& policy);
+ 
++    void SetModularMapFile(G4String fname);
++
+ 
+ protected:
+     //! \name Parameters of the sorter
+@@ -175,6 +177,8 @@ protected:
+ 
+     G4int coincID_CC;
+ 
++    G4bool              m_isModular;                    // Bool to determine if module file is being used
++
+     //@}
+ 
+ private:
+@@ -188,6 +192,7 @@ private:
+     G4bool             m_triggerOnlyByAbsorber; //! Is the window only open by pulses generated in the absorber ?
+     G4String      m_absorberSD;// absorber "SD' volume name CC
+ 
++    std::vector<G4int>    moduleIndexList;
+ 
+ 
+     std::deque<GateCoincidencePulse*> m_coincidencePulses;  // open coincidence windows
+diff --git a/source/digits_hits/include/GateCoincidenceSorterMessenger.hh b/source/digits_hits/include/GateCoincidenceSorterMessenger.hh
+index c7283112..1d049319 100644
+--- a/source/digits_hits/include/GateCoincidenceSorterMessenger.hh
++++ b/source/digits_hits/include/GateCoincidenceSorterMessenger.hh
+@@ -69,6 +69,7 @@ private:
+     G4UIcmdWithAString          *SetAcceptancePolicy4CCCmd;  //!< The UI command "MultiplesPolicy"
+     G4UIcmdWithABool            *AllPulseOpenCoincGateCmd;  //!< The UI command "allowMultiples"
+     G4UIcmdWithABool            *SetTriggerOnlyByAbsorberCmd;
++    G4UIcmdWithAString          *modularFileCmd;     // The UI commmand to specify filename for modular camera map
+     
+     
+ };
+diff --git a/source/digits_hits/src/GateCoincidenceSorter.cc b/source/digits_hits/src/GateCoincidenceSorter.cc
+index ce3e3af0..fcc0cb4b 100644
+--- a/source/digits_hits/src/GateCoincidenceSorter.cc
++++ b/source/digits_hits/src/GateCoincidenceSorter.cc
+@@ -24,6 +24,8 @@ See LICENSE.md for further details
+ #include "GateVSystem.hh"
+ #include "GateCoincidenceDigiMaker.hh"
+ 
++#include "GateMiscFunctions.hh"
++
+ //#include <map>
+ 
+ //------------------------------------------------------------------------------------------------------
+@@ -615,6 +617,42 @@ G4bool GateCoincidenceSorter::IsForbiddenCoincidence(const GatePulse* pulse1, co
+   G4int blockID1 = m_system->GetMainComponentID(pulse1),
+         blockID2 = m_system->GetMainComponentID(pulse2);
+ 
++  // Mod by S. Manger, 9th February 2021
++  // Allows the custom specification of module numbers in a repeated geometry
++
++  if (m_isModular)
++  {
++    // This is the modular camera system
++    // In here, we simply swap the blockID for that
++    // defined in the file
++
++    G4int moduleID1 = moduleIndexList[blockID1];
++    G4int moduleID2 = moduleIndexList[blockID2];
++  
++
++    G4int sectorDiff1 = moduleID1 - moduleID2;
++    if (sectorDiff1<0)
++      sectorDiff1 += 16;
++    G4int sectorDiff2 = moduleID2 - moduleID1;
++    if (sectorDiff2<0)
++      sectorDiff2 += 16;
++    G4int sectorDifference = std::min(sectorDiff1,sectorDiff2);
++
++    //Compare the sector difference with the minimum differences for valid coincidences
++    if (sectorDifference<m_minSectorDifference) {
++      if (nVerboseLevel>1)
++        G4cout << "[GateCoincidenceSorter::IsForbiddenCoincidence]: coincidence between neighbor blocks --> refused\n";
++
++      // G4cout << "[FALSE] Module Id =  " << moduleID1 << ", " << moduleID2 << G4endl;
++      return true;
++    }
++
++    // G4cout << "[TRUE] Module Id =  " << moduleID1 << ", " << moduleID2 << G4endl;
++    return false;
++
++  }
++
++
+  // Modif by D. Lazaro, February 25th, 2004
+   // Computation of sectorID, sectorNumber and sectorDifference, paramaters depending on
+   // the geometry construction of the scanner (spherical for system ecatAccel and cylindrical
+@@ -696,3 +734,12 @@ void GateCoincidenceSorter::SetSystem(G4String& inputName)
+    }
+ 
+ }
++
++
++void GateCoincidenceSorter::SetModularMapFile(G4String fname)
++{
++  // std::vector<G4int> moduleList;
++  G4cout << fname << G4endl;
++  ReadModuleIndex(fname, moduleIndexList);
++  m_isModular = true;
++}
+\ No newline at end of file
+diff --git a/source/digits_hits/src/GateCoincidenceSorterMessenger.cc b/source/digits_hits/src/GateCoincidenceSorterMessenger.cc
+index 760112ca..4dc67a04 100644
+--- a/source/digits_hits/src/GateCoincidenceSorterMessenger.cc
++++ b/source/digits_hits/src/GateCoincidenceSorterMessenger.cc
+@@ -86,7 +86,11 @@ GateCoincidenceSorterMessenger::GateCoincidenceSorterMessenger(GateCoincidenceSo
+   SetAcceptancePolicy4CCCmd ->SetGuidance("Coincidence acceptance policy in CC");
+   SetAcceptancePolicy4CCCmd ->SetCandidates("keepIfMultipleVolumeIDsInvolved keepIfMultipleVolumeNamesInvolved keepAll");
+ 
+-
++  //For Modular Camera
++  cmdName = GetDirectoryName() + "setModuleFile";
++  modularFileCmd = new G4UIcmdWithAString(cmdName,this);
++  modularFileCmd->SetGuidance("Set the file path for the module map");
++  modularFileCmd->SetParameterName("Name", false);
+ }
+ 
+ 
+@@ -103,6 +107,7 @@ GateCoincidenceSorterMessenger::~GateCoincidenceSorterMessenger()
+     delete AllPulseOpenCoincGateCmd;
+     delete SetTriggerOnlyByAbsorberCmd;
+     delete SetAcceptancePolicy4CCCmd;
++    delete modularFileCmd;
+ 
+ }
+ 
+@@ -136,6 +141,8 @@ void GateCoincidenceSorterMessenger::SetNewValue(G4UIcommand* aCommand, G4String
+     { GetCoincidenceSorter()->SetAllPulseOpenCoincGate(AllPulseOpenCoincGateCmd->GetNewBoolValue(newValue)); }
+   else if (aCommand == SetTriggerOnlyByAbsorberCmd)
+     { GetCoincidenceSorter()->SetIfTriggerOnlyByAbsorber(SetTriggerOnlyByAbsorberCmd->GetNewBoolValue(newValue));}
++  else if (aCommand == modularFileCmd)
++    { GetCoincidenceSorter()->SetModularMapFile(newValue); }
+   else
+     GateClockDependentMessenger::SetNewValue(aCommand,newValue);
+ }
+diff --git a/source/general/include/GateMiscFunctions.hh b/source/general/include/GateMiscFunctions.hh
+index da036e4f..64c59158 100644
+--- a/source/general/include/GateMiscFunctions.hh
++++ b/source/general/include/GateMiscFunctions.hh
+@@ -180,6 +180,11 @@ typename std::vector<T>  ParseNextContentLine( std::istream& input, int& lineno,
+ // Split words separated by spaces
+ void GetWords(std::vector<std::string> & words, const std::string & phrase);
+ 
++//-------
++
++void ReadModuleIndex(std::string filename,
++                     std::vector<int> & moduleIndexList);
++
+ #include "GateMiscFunctions.icc"
+ 
+ #endif // GATEMISCFUNCTIONS_HH
+diff --git a/source/general/src/GateMiscFunctions.cc b/source/general/src/GateMiscFunctions.cc
+index ce67f679..2dc94a80 100644
+--- a/source/general/src/GateMiscFunctions.cc
++++ b/source/general/src/GateMiscFunctions.cc
+@@ -728,4 +728,23 @@ void GetWords(std::vector<std::string> & words, const std::string & phrase) {
+ }
+ // ---------------------------------------------------------------------------
+ 
++void ReadModuleIndex(std::string filename,
++                     std::vector<int> & moduleIndexList){
++
++  // Open file
++  std::ifstream is;
++  OpenFileInput(filename, is);
++  skipComment(is);
++
++  G4int a = 0;
++
++  while(is){
++    moduleIndexList.push_back(lrint(ReadDouble(is)));
++    G4cout << "List: " << moduleIndexList[a] << G4endl;
++    a++;
++  }
++
++  is.close();
++}
++
+ #endif // GATEMISCFUNCTIONS_CC

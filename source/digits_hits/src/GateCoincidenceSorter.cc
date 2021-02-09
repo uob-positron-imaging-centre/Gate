@@ -24,6 +24,8 @@ See LICENSE.md for further details
 #include "GateVSystem.hh"
 #include "GateCoincidenceDigiMaker.hh"
 
+#include "GateMiscFunctions.hh"
+
 //#include <map>
 
 //------------------------------------------------------------------------------------------------------
@@ -615,6 +617,42 @@ G4bool GateCoincidenceSorter::IsForbiddenCoincidence(const GatePulse* pulse1, co
   G4int blockID1 = m_system->GetMainComponentID(pulse1),
         blockID2 = m_system->GetMainComponentID(pulse2);
 
+  // Mod by S. Manger, 9th February 2021
+  // Allows the custom specification of module numbers in a repeated geometry
+
+  if (m_isModular)
+  {
+    // This is the modular camera system
+    // In here, we simply swap the blockID for that
+    // defined in the file
+
+    G4int moduleID1 = moduleIndexList[blockID1];
+    G4int moduleID2 = moduleIndexList[blockID2];
+  
+
+    G4int sectorDiff1 = moduleID1 - moduleID2;
+    if (sectorDiff1<0)
+      sectorDiff1 += 16;
+    G4int sectorDiff2 = moduleID2 - moduleID1;
+    if (sectorDiff2<0)
+      sectorDiff2 += 16;
+    G4int sectorDifference = std::min(sectorDiff1,sectorDiff2);
+
+    //Compare the sector difference with the minimum differences for valid coincidences
+    if (sectorDifference<m_minSectorDifference) {
+      if (nVerboseLevel>1)
+        G4cout << "[GateCoincidenceSorter::IsForbiddenCoincidence]: coincidence between neighbor blocks --> refused\n";
+
+      // G4cout << "[FALSE] Module Id =  " << moduleID1 << ", " << moduleID2 << G4endl;
+      return true;
+    }
+
+    // G4cout << "[TRUE] Module Id =  " << moduleID1 << ", " << moduleID2 << G4endl;
+    return false;
+
+  }
+
+
  // Modif by D. Lazaro, February 25th, 2004
   // Computation of sectorID, sectorNumber and sectorDifference, paramaters depending on
   // the geometry construction of the scanner (spherical for system ecatAccel and cylindrical
@@ -695,4 +733,13 @@ void GateCoincidenceSorter::SetSystem(G4String& inputName)
       }
    }
 
+}
+
+
+void GateCoincidenceSorter::SetModularMapFile(G4String fname)
+{
+  // std::vector<G4int> moduleList;
+  G4cout << fname << G4endl;
+  ReadModuleIndex(fname, moduleIndexList);
+  m_isModular = true;
 }

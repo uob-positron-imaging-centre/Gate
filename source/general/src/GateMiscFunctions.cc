@@ -728,4 +728,23 @@ void GetWords(std::vector<std::string> & words, const std::string & phrase) {
 }
 // ---------------------------------------------------------------------------
 
+void ReadModuleIndex(std::string filename,
+                     std::vector<int> & moduleIndexList){
+
+  // Open file
+  std::ifstream is;
+  OpenFileInput(filename, is);
+  skipComment(is);
+
+  G4int a = 0;
+
+  while(is){
+    moduleIndexList.push_back(lrint(ReadDouble(is)));
+    G4cout << "List: " << moduleIndexList[a] << G4endl;
+    a++;
+  }
+
+  is.close();
+}
+
 #endif // GATEMISCFUNCTIONS_CC
