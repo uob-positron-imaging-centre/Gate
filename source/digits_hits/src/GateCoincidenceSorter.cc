@@ -60,6 +60,7 @@ GateCoincidenceSorter::GateCoincidenceSorter(GateDigitizer* itsDigitizer,
 
   coincID_CC=0;
   itsDigitizer->InsertDigiMakerModule( new GateCoincidenceDigiMaker(itsDigitizer, itsOutputName,true) );
+  m_isModular = false;
 }
 //------------------------------------------------------------------------------------------------------
 
@@ -619,7 +620,7 @@ G4bool GateCoincidenceSorter::IsForbiddenCoincidence(const GatePulse* pulse1, co
 
   // Mod by S. Manger, 9th February 2021
   // Allows the custom specification of module numbers in a repeated geometry
-
+  
   if (m_isModular)
   {
     // This is the modular camera system
@@ -651,9 +652,12 @@ G4bool GateCoincidenceSorter::IsForbiddenCoincidence(const GatePulse* pulse1, co
     return false;
 
   }
+  
+  // else
+  // {
 
 
- // Modif by D. Lazaro, February 25th, 2004
+  // Modif by D. Lazaro, February 25th, 2004
   // Computation of sectorID, sectorNumber and sectorDifference, paramaters depending on
   // the geometry construction of the scanner (spherical for system ecatAccel and cylindrical
   // for other systems as Ecat, CPET and cylindricalPET)
@@ -680,7 +684,7 @@ G4bool GateCoincidenceSorter::IsForbiddenCoincidence(const GatePulse* pulse1, co
       sectorDiff2 += sectorNumber;
     G4int sectorDifference = std::min(sectorDiff1,sectorDiff2);
 
-    //Compare the sector difference with the minimum differences for valid coincidences
+    //Compare the sector difference with the minimum differences for valid coincidencmes
     if (sectorDifference<m_minSectorDifference) {
       if (nVerboseLevel>1)
         G4cout << "[GateCoincidenceSorter::IsForbiddenCoincidence]: coincidence between neighbor blocks --> refused\n";
@@ -712,6 +716,7 @@ G4bool GateCoincidenceSorter::IsForbiddenCoincidence(const GatePulse* pulse1, co
   }
 
   return false;
+  // }
   }
 }
 //------------------------------------------------------------------------------------------------------
