@@ -165,6 +165,16 @@ void welcome()
   GateMessage("Core", 0, " Reference : Med. Phys. 41(6)    (2014)" << G4endl);
   GateMessage("Core", 0, " http://www.opengatecollaboration.org        " << G4endl);
   GateMessage("Core", 0, "*************************************************" << G4endl);
+  GateMessage("Core", 0, "***************************************************" << G4endl);
+  GateMessage("Core", 0, "*                                                 *" << G4endl);
+  GateMessage("Core", 0, "* P O S I T R O N   I M A G I N G   C E N T R E   *" << G4endl);
+  GateMessage("Core", 0, "*                                                 *" << G4endl);
+  GateMessage("Core", 0, "* This version has a few modifications. If any    *" << G4endl);
+  GateMessage("Core", 0, "* behaviour is unexpected, contact Sam Manger or  *" << G4endl);
+  GateMessage("Core", 0, "* Matthew Herald.                                 *" << G4endl);
+  GateMessage("Core", 0, "*[s.manger@bham.ac.uk, mxh1092@student.bham.ac.uk]*" << G4endl);
+  GateMessage("Core", 0, "*                                                 *" << G4endl);
+  GateMessage("Core", 0, "***************************************************" << G4endl);
 #ifdef GATE_USE_GPU
   GateMessage("Core", 0, "GPU support activated" << G4endl );
 #endif
